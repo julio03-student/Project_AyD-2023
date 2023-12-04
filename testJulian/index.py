@@ -18,14 +18,14 @@ t=x.time
 print('MIP: ', mip, 'PHI: ', phi, 'TIME: ', t ) """
 import pyphi
 import numpy as np
-
-import numpy as np
 from itertools import product
 from fractions import Fraction
 from pprint import pprint
 import time
 import prettytable
 import pandas as pd
+from marginalization import marginalization_base
+import marginalization as mg
 
 #Realizado por Julián Rivera Castaño y Juan Felipe Cortes Castrillon
 
@@ -106,7 +106,7 @@ def calcular_probabilidades_estado(transiciones, info):
 
     for index in range(len(transiciones)):
         for chr in range(1, len(transiciones[index])):
-            if transiciones[index][chr] is not 0:
+            if transiciones[index][chr] != 0:
                 fraccion = Fraction(transiciones[index][chr], dict[index]["repetidos"])
                 transiciones[index][chr] = str(
                     #Fraction(transiciones[index][chr], dict[index]["repetidos"]).evalf()
@@ -239,7 +239,7 @@ if __name__ == "__main__":
 
     #print(estado_canal_f)
     # EstadoCanalP
-    """ print("___________ESTADOCANALP_____________")
+    print("___________ESTADOCANALP_____________")
     generar_matriz_estado_canal_P(muestras, estado_canal_p)
     calcular_probabilidades(estado_canal_p)
     imprimir_transiciones(estado_canal_p)
@@ -257,7 +257,18 @@ if __name__ == "__main__":
     print("___________ESTADOESTADOP_____________")
     matriz_estado_p = generar_matriz_estado_estado_P(lista_estados, muestras_str)
     calcular_probabilidades_estado(matriz_estado_p, estado_canal_p)
-    imprimir_matriz(matriz_estado_p, lista_estados) """
+    imprimir_matriz(matriz_estado_p, lista_estados) 
+
+    # Marginalizacion estado futuro
+    marginalization_base('AC|AC=11', matriz_estado_f, lista_estados)
+
+    # Marginalizacion estado actual
+    cadena1 = "AB=100|ABC=111"
+    m_estado_actual, _ = mg.extraer_posiciones(cadena1)
+    print("___________MATRIZ MARGINALIZADA EN ESTADO ACTUAL_____________")
+    copy_matriz_estado = mg.convertir_matrix(matriz_estado_f.copy())
+    matriz_marginalizada_estado_actual = mg.marginalize_matrix(copy_matriz_estado, m_estado_actual[::-1])
+    pprint(matriz_marginalizada_estado_actual)
 
     end_time = time.time()  # Registra el tiempo de finalización
     # Calcula el tiempo transcurrido en segundos
