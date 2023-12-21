@@ -252,6 +252,7 @@ def combinaciones_marginalizacion_completa(
     combinaciones=[], matriz_estado=[], cadena="", marginalizacion_generica=[]
 ):
     copy_matriz_estado = deepcopy(matriz_estado)
+    valores_emb_combinaciones = {}
     for combinacion in combinaciones:
         print("COMBINACION: ", combinacion)
         # combinaciones_marginalizacion_completa(cc.divide_expression(combinacion), copy_matriz_estado, cadena, marginalizacion_generica)
@@ -274,7 +275,9 @@ def combinaciones_marginalizacion_completa(
         emd = wasserstein_distance(
             resultado_producto_tensor, marginalizacion_generica[1:][0][1:]
         )
+        valores_emb_combinaciones[str(combinacion)] = emd
         print(f"La distancia de transporte es: {emd}")
+    return valores_emb_combinaciones
 
 
 if __name__ == "__main__":
@@ -363,7 +366,8 @@ if __name__ == "__main__":
     # print("Prueba", copy_matriz_estado, cadena2)
 
     marginalizacion_generica = mg.generar_probabilidad(copy_matriz_estado, cadena2)
-    combinaciones_marginalizacion_completa(
+    print("----------------VALORES EMB--------------------------")
+    valors_emb = combinaciones_marginalizacion_completa(
         combinaciones, copy_matriz_estado, cadena2, marginalizacion_generica
     )
     """ for combinacion in combinaciones[::-1]:
