@@ -17,6 +17,7 @@ t=x.time
 
 print('MIP: ', mip, 'PHI: ', phi, 'TIME: ', t ) """
 
+from copy import deepcopy
 import pyphi
 import numpy as np
 from itertools import product
@@ -26,9 +27,10 @@ import time
 import prettytable
 import pandas as pd
 import marginalization as mg
+import combination_controller as cc
+from scipy.stats import wasserstein_distance
 
 # Realizado por Julián Rivera Castaño y Juan Felipe Cortes Castrillon
-
 
 # Genera un conjunto de muestras aleatorias
 def generar_muestras1(n_muestras, n_canales):
@@ -244,6 +246,30 @@ def imprimir_matriz_marginalizada(matriz):
 
     print(tabla)
 
+def combinaciones_marginalizacion_completa(combinaciones=[], matriz_estado=[], cadena="", marginalizacion_generica=[]):
+    copy_matriz_estado = deepcopy(matriz_estado)
+    for combinacion in combinaciones:
+        print("COMBINACION: ", combinacion)
+        #combinaciones_marginalizacion_completa(cc.divide_expression(combinacion), copy_matriz_estado, cadena, marginalizacion_generica)
+        
+        lista_de_probabilidades = mg.marginalizacion_producto_tensor(
+            copy_matriz_estado, combinacion
+        )
+
+        for x in lista_de_probabilidades:
+            imprimir_matriz_marginalizada(x)
+
+        resultado_producto_tensor = mg.producto_tensor(lista_de_probabilidades)
+
+        print(f"EL RESULTADO DEL PRODUCTO TENSOR DE {combinacion} es:")
+        print(resultado_producto_tensor)
+
+        print(f"EL RESULTADO DE LA POBABILIDAD GENERICA {cadena} es:")
+        print(marginalizacion_generica[1:][0][1:])
+
+        emd = wasserstein_distance(resultado_producto_tensor, marginalizacion_generica[1:][0][1:])
+        print(f"La distancia de transporte es: {emd}")
+
 
 if __name__ == "__main__":
     start_time = time.time()  # Registra el tiempo de inicio
@@ -318,12 +344,44 @@ if __name__ == "__main__":
     imprimir_matriz_marginalizada(probabilidades_segun_cadena)
 
     print("________________________PRODUCTO TENSOR______________________")
-    cadena2 = "BC|C=1"
+    cadena2 = "ABC|ABC=111"
     copy_matriz_estado = mg.convertir_matriz(matriz_estado_f.copy())
     copy_matriz_estado.insert(0, generar_estados(n_canales))
-    combinaciones = mg.obtener_combinaciones(cadena2)
+    """ combinaciones = mg.obtener_combinaciones(cadena2)
+    print("Antes")
+    pprint(combinaciones) """
+    combinaciones = cc.divide_expression(cadena2)
+    print("Antes")
+    pprint(combinaciones)
 
-    print("CONBINACIONES:", combinaciones)
+    #print("Prueba", copy_matriz_estado, cadena2)
+
+    marginalizacion_generica = mg.generar_probabilidad(copy_matriz_estado, cadena2)
+    combinaciones_marginalizacion_completa(combinaciones, copy_matriz_estado, cadena2, marginalizacion_generica)
+    """ for combinacion in combinaciones[::-1]:
+        lista_de_probabilidades = mg.marginalizacion_producto_tensor(
+            copy_matriz_estado, combinacion
+        )
+
+        for x in lista_de_probabilidades:
+            imprimir_matriz_marginalizada(x)
+
+        resultado_producto_tensor = mg.producto_tensor(lista_de_probabilidades)
+
+        print(f"EL RESULTADO DEL PRODUCTO TENSOR DE {combinacion} es:")
+        print(resultado_producto_tensor)
+
+        print(f"EL RESULTADO DE LA POBABILIDAD GENERICA {cadena2} es:")
+        print(marginalizacion_generica[1:][0][1:])
+
+        emd = wasserstein_distance(resultado_producto_tensor, marginalizacion_generica[1:][0][1:])
+        print(f"La distancia de transporte es: {emd}") """
+
+    print("_________________________")
+    print("COMBINACIONES EVALUADAS")
+    pprint(mg.combinaciones_evaluadas)
+
+    """ print("COMBINACIONES:", combinaciones)
     lista_de_probabilidades = mg.marginalizacion_producto_tensor(
         copy_matriz_estado, combinaciones
     )
@@ -334,7 +392,7 @@ if __name__ == "__main__":
 
     print(f"EL RESULTADO DEL PRODUCTO TENSOR DE {cadena2} es:")
     print(resultado_producto_tensor)
-
+ """
     end_time = time.time()  # Registra el tiempo de finalización
     # Calcula el tiempo transcurrido en segundos
     elapsed_time = end_time - start_time

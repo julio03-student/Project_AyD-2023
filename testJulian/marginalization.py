@@ -1,28 +1,53 @@
 from copy import copy, deepcopy
 import numpy as np
 from pprint import pprint
+import combination_controller as cc
 
+combinaciones_evaluadas = dict()
 
 def eliminar_duplicados(fila):
     lista_sin_duplicados = [item for i, item in enumerate(fila) if item not in fila[:i]]
     return lista_sin_duplicados
 
 
+def generar_diccionario(letra_final):
+    diccionario = {}
+    letra_final = letra_final.upper()
+    if ord(letra_final) < ord("C"):
+        letra_final = "C"
+    for i in range(ord("A"), ord(letra_final) + 1):
+        diccionario[chr(i)] = i - ord("A")
+
+    return diccionario
+
+
 def procesar_cadena(cadena):
     # Definir el mapeo de caracteres a números
-    mapeo = {"A": 0, "B": 1, "C": 2}
-
+    copy_cadena = cadena[:]
+    cadena_si_or = copy_cadena.replace("|", "")
+    mapeo = generar_diccionario(max(cadena_si_or, key=ord))
     # Dividir la cadena en partes
     partes = cadena.split("|")
 
     # Obtener el estado futuro, estado actual y valor del estado actual
     estado_futuro = [mapeo[c] for c in partes[0]]
-    estado_actual = [mapeo[c] for c in partes[1].split("=")[0]]
-    valor_estado_actual = [int(digito) for digito in partes[1].split("=")[1]]
+    #print(len(partes[1]))
+    estado_actual = []
+    valor_estado_actual = []
+    if len(partes[1]) > 0:
+        estado_actual = [mapeo[c] for c in partes[1].split("=")[0]]
+        valor_estado_actual = [int(digito) for digito in partes[1].split("=")[1]]
+    else:
+        estado_actual = []
 
     # Calcular las letras que faltan en estado actual y futuro
-    letras_faltantes_actual = [i for i in range(3) if i not in estado_actual]
-    letras_faltantes_futuro = [i for i in range(3) if i not in estado_futuro]
+    letras_faltantes_actual = [i for i in range(len(mapeo)) if i not in estado_actual]
+    letras_faltantes_futuro = [i for i in range(len(mapeo)) if i not in estado_futuro]
+
+    if len(letras_faltantes_actual) == len(mapeo):
+        letras_faltantes_actual = []
+    if len(letras_faltantes_futuro) == len(mapeo):
+        letras_faltantes_futuro = []
 
     return letras_faltantes_futuro, letras_faltantes_actual, valor_estado_actual
 
@@ -176,16 +201,26 @@ def extraer_probabildad_estado_canal_actual(matriz=[], cadena=""):
     if cadena == "" or len(matriz) == 0:
         return []
 
-    copy_matriz = copy(matriz)
+    copy_matriz = deepcopy(matriz)
     encabezados = copy_matriz[0]
     _, _, valor_estado_actual = procesar_cadena(cadena=cadena)
-
-    probabilidades_estado_futuro = [
-        fila for fila in copy_matriz if fila[0] == valor_estado_actual
+    probabilidades_estado_futuro = []
+    if len(valor_estado_actual) > 0:
+        probabilidades_estado_futuro = [
+            fila for fila in copy_matriz if fila[0] == valor_estado_actual
+        ]
+        probabilidades_estado_futuro.insert(0, encabezados)
+        return probabilidades_estado_futuro
+    cabecera = copy_matriz[0]
+    nueva_matriz = intercambiar_filas_columnas(copy_matriz)
+    catidad_estados = len(nueva_matriz[0]) - 1
+    sumar_filas = [
+        [[]]
+        + [round((sum(fila[1:]) / catidad_estados), 2) for fila in nueva_matriz[1:]]
     ]
-    probabilidades_estado_futuro.insert(0, encabezados)
+    sumar_filas.insert(0, cabecera)
 
-    return probabilidades_estado_futuro
+    return sumar_filas
 
 
 def obtener_combinaciones(cadena):
@@ -204,23 +239,39 @@ def obtener_combinaciones(cadena):
 
 
 def marginalizacion_producto_tensor(matriz=[], combinaciones=[]):
-    if len(matriz) < 1 or len(combinaciones) < 1:
+    if len(matriz) < 1:
+        return []
+    if len(combinaciones) < 1:
         return []
     copy_matriz = deepcopy(matriz)
     matriz_operar = deepcopy(copy_matriz)
     matriz_resultado = []
 
     for probabilidad in combinaciones:
-        m_estado_futuro, m_estado_actual, _ = procesar_cadena(probabilidad)
-        m_margi_estado_actual = mariginalizar_estado_actual(
-            matriz_operar, m_estado_actual[::-1]
-        )
-        m_margi_estado_futuro = mariginalizar_estado_futuro(
-            m_margi_estado_actual, m_estado_futuro[::-1]
-        )
-        extraer_probabilidad = extraer_probabildad_estado_canal_actual(
-            m_margi_estado_futuro, probabilidad
-        )
-        matriz_resultado.append(extraer_probabilidad)
+        #marginalizacion_producto_tensor(matriz_operar, probabilidad)
+        matriz_resultado.append(generar_probabilidad(matriz_operar, probabilidad))
         matriz_operar = deepcopy(copy_matriz)
+        """ if isinstance(probabilidad, list) and len(probabilidad):
+            marginalizacion_producto_tensor(matriz_operar, cc.divide_expression(probabilidad[0]))
+            marginalizacion_producto_tensor(matriz_operar, cc.divide_expression(probabilidad[1])) """
     return matriz_resultado
+
+def generar_probabilidad(matriz, probabilidad):
+
+    if  probabilidad in combinaciones_evaluadas:
+        print("*****************************************************************")
+        return combinaciones_evaluadas[probabilidad]
+    
+    matriz_operar = deepcopy(matriz)
+    m_estado_futuro, m_estado_actual, _ = procesar_cadena(probabilidad)
+    m_margi_estado_actual = mariginalizar_estado_actual(
+        matriz_operar, m_estado_actual[::-1]
+    )
+    m_margi_estado_futuro = mariginalizar_estado_futuro(
+        m_margi_estado_actual, m_estado_futuro[::-1]
+    )
+    extraer_probabilidad = extraer_probabildad_estado_canal_actual(
+        m_margi_estado_futuro, probabilidad
+    )
+    combinaciones_evaluadas[probabilidad] = extraer_probabilidad[1:][0][1:]
+    return extraer_probabilidad
