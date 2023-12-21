@@ -32,6 +32,7 @@ from scipy.stats import wasserstein_distance
 
 # Realizado por Julián Rivera Castaño y Juan Felipe Cortes Castrillon
 
+
 # Genera un conjunto de muestras aleatorias
 def generar_muestras1(n_muestras, n_canales):
     muestras = np.random.randint(2, size=(n_muestras, n_canales))
@@ -246,12 +247,15 @@ def imprimir_matriz_marginalizada(matriz):
 
     print(tabla)
 
-def combinaciones_marginalizacion_completa(combinaciones=[], matriz_estado=[], cadena="", marginalizacion_generica=[]):
+
+def combinaciones_marginalizacion_completa(
+    combinaciones=[], matriz_estado=[], cadena="", marginalizacion_generica=[]
+):
     copy_matriz_estado = deepcopy(matriz_estado)
     for combinacion in combinaciones:
         print("COMBINACION: ", combinacion)
-        #combinaciones_marginalizacion_completa(cc.divide_expression(combinacion), copy_matriz_estado, cadena, marginalizacion_generica)
-        
+        # combinaciones_marginalizacion_completa(cc.divide_expression(combinacion), copy_matriz_estado, cadena, marginalizacion_generica)
+
         lista_de_probabilidades = mg.marginalizacion_producto_tensor(
             copy_matriz_estado, combinacion
         )
@@ -267,7 +271,9 @@ def combinaciones_marginalizacion_completa(combinaciones=[], matriz_estado=[], c
         print(f"EL RESULTADO DE LA POBABILIDAD GENERICA {cadena} es:")
         print(marginalizacion_generica[1:][0][1:])
 
-        emd = wasserstein_distance(resultado_producto_tensor, marginalizacion_generica[1:][0][1:])
+        emd = wasserstein_distance(
+            resultado_producto_tensor, marginalizacion_generica[1:][0][1:]
+        )
         print(f"La distancia de transporte es: {emd}")
 
 
@@ -354,10 +360,12 @@ if __name__ == "__main__":
     print("Antes")
     pprint(combinaciones)
 
-    #print("Prueba", copy_matriz_estado, cadena2)
+    # print("Prueba", copy_matriz_estado, cadena2)
 
     marginalizacion_generica = mg.generar_probabilidad(copy_matriz_estado, cadena2)
-    combinaciones_marginalizacion_completa(combinaciones, copy_matriz_estado, cadena2, marginalizacion_generica)
+    combinaciones_marginalizacion_completa(
+        combinaciones, copy_matriz_estado, cadena2, marginalizacion_generica
+    )
     """ for combinacion in combinaciones[::-1]:
         lista_de_probabilidades = mg.marginalizacion_producto_tensor(
             copy_matriz_estado, combinacion
@@ -393,42 +401,8 @@ if __name__ == "__main__":
     print(f"EL RESULTADO DEL PRODUCTO TENSOR DE {cadena2} es:")
     print(resultado_producto_tensor)
  """
+    # cc.extraer_valor_optimo(mg.combinaciones_evaluadas, combinaciones)
     end_time = time.time()  # Registra el tiempo de finalización
     # Calcula el tiempo transcurrido en segundos
     elapsed_time = end_time - start_time
     print(f"Tiempo de ejecución: {elapsed_time:.6f} segundos")
-
-
-""" pyphi.config.load_file('pyphi_config.yml')
-
-tpm = np.array([
-     [0, 0, 0],
-     [0, 0, 1],
-     [1, 0, 1],
-     [1, 0, 0],
-     [1, 1, 0],
-     [1, 1, 1],
-     [1, 1, 1],
-     [1, 1, 0]
- ])
-
-cm = np.array([
-    [0,0,1],
-    [1,0,1],
-    [1,1,0]
-])
-
-labels = ('A', 'B', 'C')
-
-network = pyphi.Network(tpm, cm=cm, node_labels=labels)
-state = (1, 0, 0)
-
-subsystem = pyphi.Subsystem(network, state)
-
-x = pyphi.compute.sia(subsystem)
-
-phi = x.phi
-mip=x.cut
-t=x.time
-
-print('MIP: ', mip, 'PHI: ', phi, 'TIME:',t)  """

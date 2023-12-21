@@ -5,7 +5,9 @@ import combination_controller as cc
 
 combinaciones_evaluadas = dict()
 
+
 def eliminar_duplicados(fila):
+    # funcion para eliminar los elementos duplicados en una lista
     lista_sin_duplicados = [item for i, item in enumerate(fila) if item not in fila[:i]]
     return lista_sin_duplicados
 
@@ -31,7 +33,7 @@ def procesar_cadena(cadena):
 
     # Obtener el estado futuro, estado actual y valor del estado actual
     estado_futuro = [mapeo[c] for c in partes[0]]
-    #print(len(partes[1]))
+    # print(len(partes[1]))
     estado_actual = []
     valor_estado_actual = []
     if len(partes[1]) > 0:
@@ -198,6 +200,15 @@ def convertir_matriz(matriz):
 
 
 def extraer_probabildad_estado_canal_actual(matriz=[], cadena=""):
+    """
+    Recibe una matriz ya marginalizada con todos los estados actuales
+    que restan despues de la marginalizacion y a apartir de la cadena
+    nos muestra el estado actual que necesitamos
+    ejem:
+    AB|C=1
+    nos extrae la fila que coincide con con el valor 1
+    """
+
     if cadena == "" or len(matriz) == 0:
         return []
 
@@ -239,6 +250,10 @@ def obtener_combinaciones(cadena):
 
 
 def marginalizacion_producto_tensor(matriz=[], combinaciones=[]):
+    """
+    Recibe los subsistemas de combinacion y ejecuta el producto
+    tensor entre los resultados de la marginalizacion
+    """
     if len(matriz) < 1:
         return []
     if len(combinaciones) < 1:
@@ -248,7 +263,7 @@ def marginalizacion_producto_tensor(matriz=[], combinaciones=[]):
     matriz_resultado = []
 
     for probabilidad in combinaciones:
-        #marginalizacion_producto_tensor(matriz_operar, probabilidad)
+        # marginalizacion_producto_tensor(matriz_operar, probabilidad)
         matriz_resultado.append(generar_probabilidad(matriz_operar, probabilidad))
         matriz_operar = deepcopy(copy_matriz)
         """ if isinstance(probabilidad, list) and len(probabilidad):
@@ -256,12 +271,14 @@ def marginalizacion_producto_tensor(matriz=[], combinaciones=[]):
             marginalizacion_producto_tensor(matriz_operar, cc.divide_expression(probabilidad[1])) """
     return matriz_resultado
 
-def generar_probabilidad(matriz, probabilidad):
 
-    if  probabilidad in combinaciones_evaluadas:
-        print("*****************************************************************")
+def generar_probabilidad(matriz, probabilidad):
+    """
+    Genera la marginalizacion por combinacion
+    """
+    if probabilidad in combinaciones_evaluadas:
         return combinaciones_evaluadas[probabilidad]
-    
+
     matriz_operar = deepcopy(matriz)
     m_estado_futuro, m_estado_actual, _ = procesar_cadena(probabilidad)
     m_margi_estado_actual = mariginalizar_estado_actual(
