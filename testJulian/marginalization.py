@@ -1,193 +1,226 @@
+from copy import copy, deepcopy
 import numpy as np
-import re
-
-def marginalization_base(intruction, matriz_estado_f, estados):
-    intruction1 = intruction.split('|')
-    state_future = intruction1[0].split('=') #Lista estados futuros [A,B,....] = [1,0,...]
-    state_current = intruction1[1].split('=') #lista estados actuales [A,B,....] = [1,0,...]
-
-    print(intruction)
-    state_future_str, state_current_str = extraer_estados(intruction, state_current[0])
-
-    print(state_current[0], state_future[0], state_future_str, state_current_str)
-
-    new_data = [[float(val) for val in sublist[1:]] for sublist in matriz_estado_f] # Lista de listas de los valores de la matriz de estados futuros
+from pprint import pprint
 
 
-    positions = [ord(state) - ord('A') for state in state_current[0]] #Lista posición de los estados futuros [0,2]
-
-    nuevos_estados = [tuple(map(int, s.strip('[]').split())) for s in estados] #Lista de tuplas de los estados futuros [(0,0),(0,1),(1,0),(1,1)]
-
-    print(nuevos_estados)
-    print(positions)
-
-    nuevas_tuplas = [tuple(tupla[pos] for pos in positions) for tupla in nuevos_estados] #Lista de tuplas de los estados futuros [(0,0),(0,1),(1,0),(1,1)]
-    print(nuevas_tuplas)
-
-    #unique_tuplas = sorted(list(set(nuevas_tuplas)), key=lambda x: (x[1], x[0]))
-
-    unique_tuplas = sorted(list(set(nuevas_tuplas)), key=lambda x: tuple(reversed(x))) #lista de tuplas únicas [(0,0),(0,1),(1,0),(1,1)]
-
-    print(unique_tuplas)
-
-    #Marginalización de cada estado futuro con respecto a los estados actuales
-    resultado = np.array([sum_columns_(new_data, tupla, nuevas_tuplas) for tupla in unique_tuplas]) 
-
-    print(resultado.T) 
+def eliminar_duplicados(fila):
+    lista_sin_duplicados = [item for i, item in enumerate(fila) if item not in fila[:i]]
+    return lista_sin_duplicados
 
 
-#Permite convertir una lista de enteros a una cadena de caracteres
-def convert_state(state):
-    lista_digitos = [int(digito) for digito in state]
-    return "[" + " ".join(map(str, lista_digitos)) + "]"
+def procesar_cadena(cadena):
+    # Definir el mapeo de caracteres a números
+    mapeo = {"A": 0, "B": 1, "C": 2}
 
-def marginalization_base2(cadena):
-    # Utiliza una expresión regular para encontrar todos los números en la cadena
-    intruction = re.findall(r'\d+', cadena)
-    
-    # Convierte los números en la lista a enteros utilizando NumPy
-    states = np.array(list(map(int, intruction)))
-    
-    # Separa los números en dos arrays
-    future_state = states[::2]  # Primer número (índices pares)
-    past_state = states[1::2]  # Segundo número (índices impares)
+    # Dividir la cadena en partes
+    partes = cadena.split("|")
 
-    return future_state, past_state
+    # Obtener el estado futuro, estado actual y valor del estado actual
+    estado_futuro = [mapeo[c] for c in partes[0]]
+    estado_actual = [mapeo[c] for c in partes[1].split("=")[0]]
+    valor_estado_actual = [int(digito) for digito in partes[1].split("=")[1]]
 
-def extraer_estados(cadena, estado_actual=None, estado_futuro=None):
-    # Utiliza expresiones regulares para encontrar los números en la cadena
-    if estado_actual and estado_futuro:
-        matches = re.findall(fr'{estado_actual}=(\d+)\|{estado_futuro}=(\d+)', cadena)
-        if matches:
-            estado_actual_str, estado_futuro_str = matches[0]
-            estado_actual_array = np.array([int(digito) for digito in estado_actual_str])
-            estado_futuro_array = np.array([int(digito) for digito in estado_futuro_str])
-            return estado_futuro_array, estado_actual_array
-    elif estado_actual:
-        matches = re.findall(fr'{estado_actual}=(\d+)', cadena)
-        if matches:
-            estado_actual_str = matches[0]
-            estado_actual_array = np.array([int(digito) for digito in estado_actual_str])
-            return [], estado_actual_array
-    
-    print(f"No se encontraron coincidencias para los estados {estado_actual} y {estado_futuro}.")
-    return None
+    # Calcular las letras que faltan en estado actual y futuro
+    letras_faltantes_actual = [i for i in range(3) if i not in estado_actual]
+    letras_faltantes_futuro = [i for i in range(3) if i not in estado_futuro]
 
-#suma columnas dado un estado
-def sum_columns_(data, tuplaIndice, estados):
-
-    indices_columnas = []
-
-    # Obtener los índices de las columnas que cumplen la condición  
-    for i, tupla in enumerate(estados):
-        if tupla == tuplaIndice:
-            indices_columnas.append(i)
-
-    # Obtener las columnas que cumplen la condición
-    columnas_condicion = [[tupla[pos] for pos in indices_columnas] for tupla in data]
-
-    # Sumar las columnas seleccionadas
-    columna_resultante = [round(sum(column),2) for column in columnas_condicion]
-
-    return columna_resultante
+    return letras_faltantes_futuro, letras_faltantes_actual, valor_estado_actual
 
 
-"""
-    Entrada: Una cadena cadena que representa estados y valores numéricos separados por |.
-        Ejemplo: "AB=100|ABC=111"
-    Salida: Una tupla de dos listas, donde la primera lista contiene las posiciones de las 
-        letras faltantes en el estado actual, y la segunda lista contiene las posiciones de las
-        letras faltantes en el estado futuro. Si no hay letras faltantes, 
-        las listas correspondientes estarán vacías.
-"""
-def extraer_posiciones(cadena):
-    posiciones_actual = []
-    posiciones_futuro = []
-
-    match = re.match(r'([A-Za-z]+)=([0-9]+)\|([A-Za-z]+)=([0-9]+)', cadena)
-
-    if match:
-        estado_actual, _, estado_futuro, _ = match.groups()
-
-        for char in estado_actual:
-            if char.isalpha():
-                posiciones_actual.append(ord(char.upper()) - ord('A'))
-
-        for char in estado_futuro:
-            if char.isalpha():
-                posiciones_futuro.append(ord(char.upper()) - ord('A'))
-
-        letras_faltantes_actual = set(estado_futuro.upper()) - set(estado_actual.upper())
-        letras_faltantes_futuro = set(estado_actual.upper()) - set(estado_futuro.upper())
-
-        posiciones_faltantes_actual = [ord(char) - ord('A') for char in letras_faltantes_actual]
-        posiciones_faltantes_futuro = [ord(char) - ord('A') for char in letras_faltantes_futuro]
-
-        return posiciones_faltantes_actual, posiciones_faltantes_futuro
-
-    return posiciones_actual, posiciones_futuro
-
-"""
+def mariginalizar_estado_actual(matriz, channel, position=0):
+    """
     Entrada:
-        matrix: Una matriz en formato especial, donde cada fila tiene una lista de canales y valores asociados.
+        matriz: Una matriz en formato especial, donde cada fila tiene una lista de canales y valores asociados.
         channel: Una lista que representa los canales (0 para A, 1 para B, 2 para C).
-        position (opcional): Un índice que indica el canal actual que se está marginalizando 
+        position (opcional): Un índice que indica el canal actual que se está marginalizando
         (por defecto, comienza desde el canal A).
     Salida: Una nueva matriz marginalizada después de eliminar el canal especificado.
-"""
-def marginalize_matrix(matrix, channel, position=0):
+    """
     # Verificar que el canal especificado sea válido
     if position > len(channel) - 1:
-        return matrix
+        return matriz
     if channel[position] not in [0, 1, 2]:
         raise ValueError("Canal no válido. Debe ser 0 para A, 1 para B o 2 para C.")
-    copy_matrix = matrix.copy()
+    copy_matriz = copy(matriz)
     # Inicializar la matriz marginalizada con ceros
-    marginalized_matrix = []
+    marginalized_matriz = []
 
     # Iterar sobre cada fila de la matriz original
-    for row in copy_matrix:
-        if row[0]:
-           row[0].remove(row[0][channel[position]])
-        marginalized_matrix.append(row)
-    matrix_sum_rows = sumar_filas(marginalized_matrix)
-    return marginalize_matrix(matrix_sum_rows, channel, position+1)
+    for row in copy_matriz:
+        if row[0] != "" and len(row[0]) > channel[position]:
+            row[0].remove(row[0][channel[position]])
+        marginalized_matriz.append(row)
+    matriz_sum_rows = sumar_filas(marginalized_matriz)
+    return mariginalizar_estado_actual(matriz_sum_rows, channel, position + 1)
 
-"""
+
+def mariginalizar_estado_futuro(matriz, canales, posicion=0):
+    if posicion > len(canales) - 1:
+        return matriz
+    if canales[posicion] not in [0, 1, 2]:
+        return ValueError("Canal no valido")
+    copy_matriz = copy(matriz)
+    fila_canales = copy_matriz[0]
+    nueva_fila_canales = [""]
+
+    for canal in fila_canales:
+        if len(canal) > 0:
+            canal.remove(canal[canales[posicion]])
+            nueva_fila_canales.append(canal)
+    copy_matriz.insert(0, nueva_fila_canales)
+    matriz_marginalizada = sumar_columnas(copy_matriz[1:])
+    return mariginalizar_estado_futuro(matriz_marginalizada, canales, posicion + 1)
+
+
+def sumar_filas(matriz, columnas=False):
+    """
     Entrada: Una matriz en formato especial, donde cada fila tiene una clave (canal) y valores asociados.
     Salida: Una nueva matriz después de sumar las filas con la misma clave.
-"""    
-def sumar_filas(matriz):
+    """
     resultado = {}
+    copia_matriz = copy(matriz)
 
-    for fila in matriz:
+    for fila in copia_matriz:
         clave = tuple(fila[0])
         if clave in resultado:
-            resultado[clave] = [round(a + b, 2) for a, b in zip(resultado[clave], fila[1:])]
+            if not columnas:
+                resultado[clave] = [
+                    round((a + b) / 2, 2) for a, b in zip(resultado[clave], fila[1:])
+                ]
+            else:
+                resultado[clave] = [
+                    round(a + b, 2) for a, b in zip(resultado[clave], fila[1:])
+                ]
         else:
             resultado[clave] = fila[1:]
 
-    matriz_resultado = [[[int(x) for x in key], *values] for key, values in resultado.items()]
+    matriz_resultado = [
+        [[int(x) for x in key], *values] for key, values in resultado.items()
+    ]
     return matriz_resultado
 
-"""
+
+def sumar_columnas(matriz):
+    # Obtener el número de filas y columnas
+    num_filas = len(matriz)
+    num_columnas = len(matriz[0])
+
+    # Crear la nueva matriz intercambiando filas con columnas
+    nueva_matriz = [
+        [matriz[j][i] for j in range(num_filas)] for i in range(num_columnas)
+    ]
+
+    suma_col = intercambiar_filas_columnas(sumar_filas(nueva_matriz, columnas=True))
+
+    return suma_col
+
+
+def producto_tensor(matriz):
+    # limpiar la matriz para poder operar sobre ella
+    matriz_subproblemas = []
+    for vector in matriz:
+        matriz_subproblemas.append(vector[1:][0][1:])
+
+    # Verifica que la matriz tenga al menos dos vectores
+    if len(matriz) < 2 or len(matriz_subproblemas) < 2:
+        raise ValueError("La matriz debe contener al menos dos vectores.")
+
+    # Calcula el producto tensor de los dos primeros vectores
+    resultado = np.kron(matriz_subproblemas[0], matriz_subproblemas[1])
+
+    # Calcula el producto tensor de los vectores restantes
+    for i in range(2, len(matriz_subproblemas)):
+        resultado = np.kron(resultado, matriz_subproblemas[i])
+
+    return resultado
+
+
+def convertir_cadena_a_lista(cadena):
+    """
     Entrada: Una cadena que representa una lista de valores numéricos encerrados en corchetes y separados por comas. Ejemplo: "[1, 2, 3]"
     Salida: Una lista de enteros obtenida al convertir la cadena de entrada.
-"""
-def convertir_cadena_a_lista(cadena):
+    """
     return [int(char) for char in cadena[1:-1].split()]
 
-"""
+
+def intercambiar_filas_columnas(matriz):
+    # Obtener el número de filas y columnas
+    num_filas = len(matriz)
+    num_columnas = len(matriz[0])
+
+    # Crear la nueva matriz intercambiando filas con columnas
+    nueva_matriz = [
+        [matriz[j][i] for j in range(num_filas)] for i in range(num_columnas)
+    ]
+
+    return nueva_matriz
+
+
+def convertir_matriz(matriz):
+    """
     Entrada: Una matriz en formato especial, donde cada fila tiene una lista de canales y valores asociados.
-    Salida: Una nueva matriz donde las cadenas de canales se convierten en listas de enteros, y los valores 
+    Salida: Una nueva matriz donde las cadenas de canales se convierten en listas de enteros, y los valores
     se convierten en números de punto flotante.
-"""
-def convertir_matrix(matrix):
-    new_matrix = []
-    for fila in matrix:
-        new_matrix.append([convertir_cadena_a_lista(fila[0])] + [float(valor) for valor in fila[1:]])
+    """
+    copy_matriz = copy(matriz)
+    new_matriz = []
+    for fila in copy_matriz:
+        new_matriz.append(
+            [convertir_cadena_a_lista(fila[0])] + [float(valor) for valor in fila[1:]]
+        )
 
-    return new_matrix
+    return new_matriz
 
 
+def extraer_probabildad_estado_canal_actual(matriz=[], cadena=""):
+    if cadena == "" or len(matriz) == 0:
+        return []
 
+    copy_matriz = copy(matriz)
+    encabezados = copy_matriz[0]
+    _, _, valor_estado_actual = procesar_cadena(cadena=cadena)
+
+    probabilidades_estado_futuro = [
+        fila for fila in copy_matriz if fila[0] == valor_estado_actual
+    ]
+    probabilidades_estado_futuro.insert(0, encabezados)
+
+    return probabilidades_estado_futuro
+
+
+def obtener_combinaciones(cadena):
+    # Dividir la cadena en dos partes: la primera parte antes del '|' y la segunda parte después del '='
+    partes = cadena.split("|")
+    prefijo = partes[0]
+    sufijo_valor = partes[1]
+
+    # Dividir la segunda parte en dos: la parte antes del '=' y la parte después del '='
+    sufijo, valor = sufijo_valor.split("=")
+
+    # Crear la lista de combinaciones
+    combinaciones = [f"{caracter}|{sufijo}={valor}" for caracter in prefijo]
+
+    return combinaciones
+
+
+def marginalizacion_producto_tensor(matriz=[], combinaciones=[]):
+    if len(matriz) < 1 or len(combinaciones) < 1:
+        return []
+    copy_matriz = deepcopy(matriz)
+    matriz_operar = deepcopy(copy_matriz)
+    matriz_resultado = []
+
+    for probabilidad in combinaciones:
+        m_estado_futuro, m_estado_actual, _ = procesar_cadena(probabilidad)
+        m_margi_estado_actual = mariginalizar_estado_actual(
+            matriz_operar, m_estado_actual[::-1]
+        )
+        m_margi_estado_futuro = mariginalizar_estado_futuro(
+            m_margi_estado_actual, m_estado_futuro[::-1]
+        )
+        extraer_probabilidad = extraer_probabildad_estado_canal_actual(
+            m_margi_estado_futuro, probabilidad
+        )
+        matriz_resultado.append(extraer_probabilidad)
+        matriz_operar = deepcopy(copy_matriz)
+    return matriz_resultado

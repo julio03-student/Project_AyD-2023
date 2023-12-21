@@ -12,7 +12,7 @@ LOG_FILE_LEVEL: INFO
 LOG_STDOUT_LEVEL: WARNING
 MAXIMUM_CACHE_MEMORY_PERCENTAGE: 50
 MEASURE: EMD
-MONGODB_CONFIG:  
+MONGODB_CONFIG:
   collection_name: cache
   database_name: pyphi
   host: localhost
@@ -27,10 +27,10 @@ PRECISION: 6
 PRINT_FRACTIONS: true
 PROGRESS_BARS: true
 REDIS_CACHE: false
-REDIS_CONFIG: 
-  db: 0 
-  host: localhost 
-  port: 6379 
+REDIS_CONFIG:
+  db: 0
+  host: localhost
+  port: 6379
   test_db: 1
 REPR_VERBOSITY: 2
 SINGLE_MICRO_NODES_WITH_SELFLOOPS_HAVE_PHI: false
